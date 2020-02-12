@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple_touch.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon_32_32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon_16_16.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    hostname: new URL('https://xiaohuiluo.github.io').hostname,
+    root: '/',
+    scheme: 'Gemini',
+    version: '7.7.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    comments: {"style":"tabs","active":"valine","storage":true,"lazyload":false,"nav":null,"activeClass":"valine"},
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},
+    path: '',
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}
+  };
+</script>
+
+  <meta name="description" content="Trellis+Stratum样例试跑及运行机制解析">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Trellis Stratum 样例试跑及解析">
+<meta property="og:url" content="https://xiaohuiluo.github.io/2020/02/10/trellis-stratum/index.html">
+<meta property="og:site_name" content="HUI">
+<meta property="og:description" content="Trellis+Stratum样例试跑及运行机制解析">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://xiaohuiluo.github.io/2020/02/10/trellis-stratum/topo.png">
+<meta property="article:published_time" content="2020-02-10T12:03:20.000Z">
+<meta property="article:modified_time" content="2020-02-12T12:54:15.652Z">
+<meta property="article:author" content="HUI">
+<meta property="article:tag" content="trellis">
+<meta property="article:tag" content="stratum">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://xiaohuiluo.github.io/2020/02/10/trellis-stratum/topo.png">
+
+<link rel="canonical" href="https://xiaohuiluo.github.io/2020/02/10/trellis-stratum/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true
+  };
+</script>
+
+  <title>Trellis Stratum 样例试跑及解析 | HUI</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">HUI</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">Footprint of hui</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">5</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">2</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">5</span></a>
+
+  </li>
+  </ul>
+
+</nav>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://xiaohuiluo.github.io/2020/02/10/trellis-stratum/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="HUI">
+      <meta itemprop="description" content="DAY DAY UP">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="HUI">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Trellis Stratum 样例试跑及解析
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-02-10 20:03:20" itemprop="dateCreated datePublished" datetime="2020-02-10T20:03:20+08:00">2020-02-10</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-02-12 20:54:15" itemprop="dateModified" datetime="2020-02-12T20:54:15+08:00">2020-02-12</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Trellis/" itemprop="url" rel="index">
+                    <span itemprop="name">Trellis</span>
+                  </a>
+                </span>
+            </span>
+
+          
+            <span id="/2020/02/10/trellis-stratum/" class="post-meta-item leancloud_visitors" data-flag-title="Trellis Stratum 样例试跑及解析" title="阅读次数">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="fa fa-comment-o"></i>
+      </span>
+      <span class="post-meta-item-text">Valine：</span>
+    
+    <a title="valine" href="/2020/02/10/trellis-stratum/#comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2020/02/10/trellis-stratum/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  <br>
+            <span class="post-meta-item" title="本文字数">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-file-word-o"></i>
+              </span>
+                <span class="post-meta-item-text">本文字数：</span>
+              <span>13k</span>
+            </span>
+            <span class="post-meta-item" title="阅读时长">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-clock-o"></i>
+              </span>
+                <span class="post-meta-item-text">阅读时长 &asymp;</span>
+              <span>11 分钟</span>
+            </span>
+            <div class="post-description">Trellis+Stratum样例试跑及运行机制解析</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>试跑了一下 Trellis+Stratum样例，记录一下，为后面使用真实P4设备运行作准备。</p>
+<h2 id="Trellis-Stratum样例运行及解析"><a href="#Trellis-Stratum样例运行及解析" class="headerlink" title="Trellis+Stratum样例运行及解析"></a>Trellis+Stratum样例运行及解析</h2><p>试跑参考Stratum项目中example步骤，具体参见<a href="https://github.com/stratum/stratum/tree/master/tools/mininet/examples/trellis" target="_blank" rel="noopener">stratum-trellis-example</a>，ONOS控制器及Mininet模拟器都运行在docker容器中，容器的启停及配置(onos/mininet)都通过Makefile管理，直接使用make命令来操作。</p>
+<h3 id="代码下载"><a href="#代码下载" class="headerlink" title="代码下载"></a>代码下载</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># download stratum source code</span></span><br><span class="line">git <span class="built_in">clone</span> https://github.com/stratum/stratum.git</span><br></pre></td></tr></table></figure>
+
+<h3 id="样例运行依赖"><a href="#样例运行依赖" class="headerlink" title="样例运行依赖"></a>样例运行依赖</h3><p>样例主要依赖有docker和make工具，docker使用docker-compose来启动多个容器，我这边安装版本如下:</p>
+<ol>
+<li><p>docker 19.03.5</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line">hui@ubuntu:~&#x2F;Projects&#x2F;hui&#x2F;stratum$ docker version</span><br><span class="line">Client: Docker Engine - Community</span><br><span class="line"> Version:           19.03.5</span><br><span class="line"> API version:       1.40</span><br><span class="line"> Go version:        go1.12.12</span><br><span class="line"> Git commit:        633a0ea838</span><br><span class="line"> Built:             Wed Nov 13 07:50:12 2019</span><br><span class="line"> OS&#x2F;Arch:           linux&#x2F;amd64</span><br><span class="line"> Experimental:      false</span><br><span class="line"></span><br><span class="line">Server: Docker Engine - Community</span><br><span class="line"> Engine:</span><br><span class="line">  Version:          19.03.5</span><br><span class="line">  API version:      1.40 (minimum version 1.12)</span><br><span class="line">  Go version:       go1.12.12</span><br><span class="line">  Git commit:       633a0ea838</span><br><span class="line">  Built:            Wed Nov 13 07:48:43 2019</span><br><span class="line">  OS&#x2F;Arch:          linux&#x2F;amd64</span><br><span class="line">  Experimental:     false</span><br><span class="line"> containerd:</span><br><span class="line">  Version:          1.2.10</span><br><span class="line">  GitCommit:        b34a5c8af56e510852c35414db4c1f4fa6172339</span><br><span class="line"> runc:</span><br><span class="line">  Version:          1.0.0-rc8+dev</span><br><span class="line">  GitCommit:        3e425f80a8c931f88e6d94a8c831b9d5aa481657</span><br><span class="line"> docker-init:</span><br><span class="line">  Version:          0.18.0</span><br><span class="line">  GitCommit:        fec3683</span><br></pre></td></tr></table></figure></li>
+<li><p>docker-compose 1.25.3</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">hui@ubuntu:~$ docker-compose --version</span><br><span class="line">docker-compose version 1.25.3, build d4d1b42b</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>make 4.1</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">hui@ubuntu:~&#x2F;Projects&#x2F;hui&#x2F;stratum$ make --version</span><br><span class="line">GNU Make 4.1</span><br><span class="line">Built for x86_64-pc-linux-gnu</span><br><span class="line">Copyright (C) 1988-2014 Free Software Foundation, Inc.</span><br><span class="line">License GPLv3+: GNU GPL version 3 or later &lt;http:&#x2F;&#x2F;gnu.org&#x2F;licenses&#x2F;gpl.html&gt;</span><br><span class="line">This is free software: you are free to change and redistribute it.</span><br><span class="line">There is NO WARRANTY, to the extent permitted by law.</span><br></pre></td></tr></table></figure>
+
+</li>
+</ol>
+<h3 id="Make命令"><a href="#Make命令" class="headerlink" title="Make命令"></a>Make命令</h3><table>
+<thead>
+<tr>
+<th>Make command</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>make pull</td>
+<td>拉取样例所需docker image</td>
+</tr>
+<tr>
+<td>make start</td>
+<td>启动所有docker容器 (mininet and onos)</td>
+</tr>
+<tr>
+<td>make stop</td>
+<td>关闭所有docker容器</td>
+</tr>
+<tr>
+<td>make onos-cli</td>
+<td>访问ONOS命令行 (password: rocks, Ctrl+D to exit)</td>
+</tr>
+<tr>
+<td>make onos-ui</td>
+<td>打开ONOS ui (user onos password rocks)</td>
+</tr>
+<tr>
+<td>make mn-cli</td>
+<td>访问Mininet命令行 (Ctrl+A Ctrl+D to exit)</td>
+</tr>
+<tr>
+<td>make onos-log</td>
+<td>显示ONOS运行日志</td>
+</tr>
+<tr>
+<td>make mn-log</td>
+<td>显示Mininet日志 (i.e., the CLI output)</td>
+</tr>
+<tr>
+<td>make netcfg</td>
+<td>推送netcfg.json文件对ONOS进行配置</td>
+</tr>
+<tr>
+<td>make reset</td>
+<td>重置本教程环境</td>
+</tr>
+</tbody></table>
+<p>docker容器相关make命令主要通过docker-compose命令实现，Makefile文件如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line">hui@ubuntu:~&#x2F;Projects&#x2F;hui&#x2F;stratum&#x2F;tools&#x2F;mininet&#x2F;examples&#x2F;trellis$ cat Makefile</span><br><span class="line">onos_url :&#x3D; http:&#x2F;&#x2F;localhost:8181&#x2F;onos</span><br><span class="line">onos_post :&#x3D; curl -sSL --user onos:rocks --noproxy localhost -X POST -H &#39;Content-Type:application&#x2F;json&#39;</span><br><span class="line"></span><br><span class="line">pull:</span><br><span class="line">	docker-compose pull</span><br><span class="line"></span><br><span class="line">start:</span><br><span class="line">	docker-compose up -d</span><br><span class="line"></span><br><span class="line">stop:</span><br><span class="line">	docker-compose down -t0</span><br><span class="line"></span><br><span class="line">restart: stop start</span><br><span class="line"></span><br><span class="line">onos-cli:</span><br><span class="line">	ssh -o &quot;UserKnownHostsFile&#x3D;&#x2F;dev&#x2F;null&quot; -o &quot;StrictHostKeyChecking&#x3D;no&quot; -p 8101 onos@localhost</span><br><span class="line"></span><br><span class="line">onos-log:</span><br><span class="line">	docker-compose logs -f onos</span><br><span class="line"></span><br><span class="line">onos-ui:</span><br><span class="line">	open $&#123;onos_url&#125;&#x2F;ui</span><br><span class="line"></span><br><span class="line">mn-cli:</span><br><span class="line">	docker-compose exec mininet screen -Urx -S cli</span><br><span class="line"></span><br><span class="line">mn-log:</span><br><span class="line">	docker-compose logs -f mininet</span><br><span class="line"></span><br><span class="line">netcfg:</span><br><span class="line">	$&#123;onos_post&#125; $&#123;onos_url&#125;&#x2F;v1&#x2F;network&#x2F;configuration&#x2F; -d@.&#x2F;topo&#x2F;netcfg.json</span><br><span class="line"></span><br><span class="line">reset: stop</span><br><span class="line">	-rm -rf .&#x2F;tmp</span><br></pre></td></tr></table></figure>
+
+<h3 id="样例运行"><a href="#样例运行" class="headerlink" title="样例运行"></a>样例运行</h3><ol>
+<li>启动onos控制器容器及mininet模拟器容器<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line">hui@ubuntu:~&#x2F;Projects&#x2F;hui&#x2F;stratum&#x2F;tools&#x2F;mininet&#x2F;examples&#x2F;trellis$ make start</span><br><span class="line">docker-compose up -d</span><br><span class="line">Creating network &quot;trellis_default&quot; with the default driver</span><br><span class="line">Pulling mininet (opennetworking&#x2F;mn-stratum:)...</span><br><span class="line">latest: Pulling from opennetworking&#x2F;mn-stratum</span><br><span class="line">070ec86b6816: Pull complete</span><br><span class="line">e16d4518d18b: Pull complete</span><br><span class="line">6381cab93f84: Pull complete</span><br><span class="line">bfaa2d555d19: Pull complete</span><br><span class="line">d4671a766109: Pull complete</span><br><span class="line">bd422f3891f2: Pull complete</span><br><span class="line">Digest: sha256:a693a53675e20607679d8735caaf7cde069619f66331858a24fb768afadd55d0</span><br><span class="line">Status: Downloaded newer image for opennetworking&#x2F;mn-stratum:latest</span><br><span class="line">Pulling onos (onosproject&#x2F;onos:2.2.0)...</span><br><span class="line">2.2.0: Pulling from onosproject&#x2F;onos</span><br><span class="line">5b7339215d1d: Pull complete</span><br><span class="line">14ca88e9f672: Pull complete</span><br><span class="line">a31c3b1caad4: Pull complete</span><br><span class="line">b054a26005b7: Pull complete</span><br><span class="line">0b6d374ecc56: Pull complete</span><br><span class="line">4b7c47d8c7ab: Downloading [&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&gt;                                      ]</span><br><span class="line">d957850d36ab: Downloading [&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&gt;                                       ]</span><br><span class="line">4b7c47d8c7ab: Downloading [&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&gt;                                  ]</span><br><span class="line">d957850d36ab: Downloading [&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&gt;                                   ]</span><br><span class="line">4b7c47d8c7ab: Pull complete</span><br><span class="line">d957850d36ab: Pull complete</span><br><span class="line">Digest: sha256:c1d18e6957a785d0234855eb8c70909bfc68849338f0567e12a6ae7ce6f4ba91</span><br><span class="line">Status: Downloaded newer image for onosproject&#x2F;onos:2.2.0</span><br><span class="line">Creating trellis_mininet_1 ... done</span><br><span class="line">Creating trellis_onos_1    ... done</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">hui@ubuntu:~&#x2F;Projects&#x2F;hui&#x2F;stratum&#x2F;tools&#x2F;mininet&#x2F;examples&#x2F;trellis$ docker ps</span><br><span class="line">CONTAINER ID        IMAGE                       COMMAND                  CREATED             STATUS              PORTS                                                                          NAMES</span><br><span class="line">fb40ca350a2d        onosproject&#x2F;onos:2.2.0      &quot;.&#x2F;bin&#x2F;onos-service …&quot;   15 minutes ago      Up 15 minutes       6640&#x2F;tcp, 0.0.0.0:8101-&gt;8101&#x2F;tcp, 6653&#x2F;tcp, 9876&#x2F;tcp, 0.0.0.0:8181-&gt;8181&#x2F;tcp   trellis_onos_1</span><br><span class="line">5f8e49e6688d        opennetworking&#x2F;mn-stratum   &quot;&#x2F;topo&#x2F;entrypoint.sh&quot;    15 minutes ago      Up 15 minutes       0.0.0.0:50001-50004-&gt;50001-50004&#x2F;tcp, 50005-50100&#x2F;tcp                          trellis_mininet_1</span><br></pre></td></tr></table></figure>
+
+</li>
+</ol>
+<p>onos控制器容器和mininet容器由docker-compose定义启动,启动如果报错需要注意docker及docker-compose的版本是否兼容，如下docker-compose.yml文件:</p>
+<figure class="highlight yml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">version:</span> <span class="string">"3"</span></span><br><span class="line"></span><br><span class="line"><span class="attr">services:</span></span><br><span class="line">  <span class="attr">mininet:</span></span><br><span class="line">    <span class="attr">image:</span> <span class="string">opennetworking/mn-stratum</span></span><br><span class="line">    <span class="attr">volumes:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">./tmp:/tmp</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">./topo:/topo</span></span><br><span class="line">    <span class="attr">privileged:</span> <span class="literal">true</span></span><br><span class="line">    <span class="attr">ports:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">"50001:50001"</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">"50002:50002"</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">"50003:50003"</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">"50004:50004"</span></span><br><span class="line">    <span class="attr">entrypoint:</span> <span class="string">"/topo/entrypoint.sh"</span></span><br><span class="line">  <span class="attr">onos:</span></span><br><span class="line">    <span class="attr">image:</span> <span class="string">onosproject/onos:2.2.0</span></span><br><span class="line">    <span class="attr">ports:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">"8181:8181"</span> <span class="comment"># HTTP</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">"8101:8101"</span> <span class="comment"># SSH (CLI)</span></span><br><span class="line">    <span class="attr">environment:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">ONOS_APPS=gui,drivers.bmv2,pipelines.fabric,segmentrouting,lldpprovider,hostprovider</span></span><br><span class="line">    <span class="attr">links:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">mininet</span></span><br></pre></td></tr></table></figure>
+<p>如上docker-compose定义了两个Service分别对应onos容器和mininet容器，mininet容器开放了50001~50004端口，onos容器开放了8181和8101端口分别用于ui 页面访问和cli ssh访问,onos默认开启的App有:gui,drivers.bmv2,pipelines.fabric,segmentrouting,lldpprovider,hostprovider</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br></pre></td><td class="code"><pre><span class="line">hui@ubuntu:~&#x2F;Projects&#x2F;hui&#x2F;stratum&#x2F;tools&#x2F;mininet&#x2F;examples&#x2F;trellis$ make onos-cli</span><br><span class="line">ssh -o &quot;UserKnownHostsFile&#x3D;&#x2F;dev&#x2F;null&quot; -o &quot;StrictHostKeyChecking&#x3D;no&quot; -p 8101 onos@localhost</span><br><span class="line">Warning: Permanently added &#39;[localhost]:8101&#39; (RSA) to the list of known hosts.</span><br><span class="line">Password authentication</span><br><span class="line">Password:</span><br><span class="line">Welcome to Open Network Operating System (ONOS)!</span><br><span class="line">     ____  _  ______  ____     </span><br><span class="line">    &#x2F; __ \&#x2F; |&#x2F; &#x2F; __ \&#x2F; __&#x2F;   </span><br><span class="line">   &#x2F; &#x2F;_&#x2F; &#x2F;    &#x2F; &#x2F;_&#x2F; &#x2F;\ \     </span><br><span class="line">   \____&#x2F;_&#x2F;|_&#x2F;\____&#x2F;___&#x2F;     </span><br><span class="line"></span><br><span class="line">Documentation: wiki.onosproject.org      </span><br><span class="line">Tutorials:     tutorials.onosproject.org</span><br><span class="line">Mailing lists: lists.onosproject.org     </span><br><span class="line"></span><br><span class="line">Come help out! Find out how at: contribute.onosproject.org</span><br><span class="line"></span><br><span class="line">Hit &#39;&lt;tab&gt;&#39; for a list of available commands</span><br><span class="line">and &#39;[cmd] --help&#39; for help on a specific command.</span><br><span class="line">Hit &#39;&lt;ctrl-d&gt;&#39; or type &#39;logout&#39; to exit ONOS session.</span><br><span class="line"></span><br><span class="line">onos@root &gt; apps -a -s                                                                                                                                                                              11:38:58</span><br><span class="line">*   3 org.onosproject.protocols.grpc       2.2.0    gRPC Protocol Subsystem</span><br><span class="line">*   4 org.onosproject.protocols.gnmi       2.2.0    gNMI Protocol Subsystem</span><br><span class="line">*   5 org.onosproject.generaldeviceprovider 2.2.0    General Device Provider</span><br><span class="line">*   6 org.onosproject.protocols.p4runtime  2.2.0    P4Runtime Protocol Subsystem</span><br><span class="line">*   7 org.onosproject.p4runtime            2.2.0    P4Runtime Provider</span><br><span class="line">*   8 org.onosproject.drivers              2.2.0    Default Drivers</span><br><span class="line">*   9 org.onosproject.drivers.p4runtime    2.2.0    P4Runtime Drivers</span><br><span class="line">*  14 org.onosproject.lldpprovider         2.2.0    LLDP Link Provider</span><br><span class="line">*  37 org.onosproject.route-service        2.2.0    Route Service Server</span><br><span class="line">*  38 org.onosproject.mcast                2.2.0    Multicast traffic control</span><br><span class="line">*  39 org.onosproject.portloadbalancer     2.2.0    Port Load Balance Service</span><br><span class="line">*  40 org.onosproject.segmentrouting       2.2.0    Segment Routing</span><br><span class="line">*  45 org.onosproject.drivers.gnmi         2.2.0    gNMI Drivers</span><br><span class="line">*  46 org.onosproject.protocols.gnoi       2.2.0    gNOI Protocol Subsystem</span><br><span class="line">*  47 org.onosproject.drivers.gnoi         2.2.0    gNOI Drivers</span><br><span class="line">*  48 org.onosproject.pipelines.basic      2.2.0    Basic Pipelines</span><br><span class="line">*  49 org.onosproject.drivers.stratum      2.2.0    Stratum Drivers</span><br><span class="line">*  58 org.onosproject.hostprovider         2.2.0    Host Location Provider</span><br><span class="line">* 120 org.onosproject.drivers.bmv2         2.2.0    BMv2 Drivers</span><br><span class="line">* 167 org.onosproject.gui                  2.2.0    ONOS Legacy GUI</span><br><span class="line">* 169 org.onosproject.pipelines.fabric     2.2.0    Fabric Pipeline</span><br></pre></td></tr></table></figure>
+
+<ol start="2">
+<li>网络配置<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">hui@ubuntu:~&#x2F;Projects&#x2F;hui&#x2F;stratum&#x2F;tools&#x2F;mininet&#x2F;examples&#x2F;trellis$ make netcfg</span><br><span class="line">curl -sSL --user onos:rocks --noproxy localhost -X POST -H &#39;Content-Type:application&#x2F;json&#39; http:&#x2F;&#x2F;localhost:8181&#x2F;onos&#x2F;v1&#x2F;network&#x2F;configuration&#x2F; -d@.&#x2F;topo&#x2F;netcfg.json</span><br></pre></td></tr></table></figure>
+
+</li>
+</ol>
+<p>make netcfg功能为导入网络配置文件到onos控制器，核心为导入模拟转发设备(stratum-bmv2)和配置端口interface ip&amp;vlan，配置文件为./topo/netcfg.json，导入成功，访问<a href="http://localhost:8181/onos/ui/index.html#/topo" target="_blank" rel="noopener">http://localhost:8181/onos/ui/index.html#/topo</a>可发现模拟设备已上线，拓扑如下:<br><img src="/2020/02/10/trellis-stratum/topo.png" alt="topo">  </p>
+<p>使用cli查看devices,4个设备分别通过50001~50004端口建立stratum连接,onos启动stratum客户端，设备测启动stratum的服务端.</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">onos@root &gt; devices                                                     12:21:42</span><br><span class="line">id&#x3D;device:leaf1, available&#x3D;true, local-status&#x3D;connected 1h5m ago, role&#x3D;MASTER, type&#x3D;SWITCH, mfr&#x3D;Open Networking Foundation, hw&#x3D;BMv2 simple_switch, sw&#x3D;Stratum, serial&#x3D;unknown, chassis&#x3D;0, driver&#x3D;stratum-bmv2:org.onosproject.pipelines.fabric, locType&#x3D;none, managementAddress&#x3D;grpc:&#x2F;&#x2F;mininet:50001?device_id&#x3D;1, name&#x3D;device:leaf1, p4DeviceId&#x3D;1, protocol&#x3D;P4Runtime, gNMI, gNOI</span><br><span class="line">id&#x3D;device:leaf2, available&#x3D;true, local-status&#x3D;connected 1h5m ago, role&#x3D;MASTER, type&#x3D;SWITCH, mfr&#x3D;Open Networking Foundation, hw&#x3D;BMv2 simple_switch, sw&#x3D;Stratum, serial&#x3D;unknown, chassis&#x3D;0, driver&#x3D;stratum-bmv2:org.onosproject.pipelines.fabric, locType&#x3D;none, managementAddress&#x3D;grpc:&#x2F;&#x2F;mininet:50002?device_id&#x3D;1, name&#x3D;device:leaf2, p4DeviceId&#x3D;1, protocol&#x3D;P4Runtime, gNMI, gNOI</span><br><span class="line">id&#x3D;device:spine1, available&#x3D;true, local-status&#x3D;connected 1h5m ago, role&#x3D;MASTER, type&#x3D;SWITCH, mfr&#x3D;Open Networking Foundation, hw&#x3D;BMv2 simple_switch, sw&#x3D;Stratum, serial&#x3D;unknown, chassis&#x3D;0, driver&#x3D;stratum-bmv2:org.onosproject.pipelines.fabric, locType&#x3D;none, managementAddress&#x3D;grpc:&#x2F;&#x2F;mininet:50003?device_id&#x3D;1, name&#x3D;device:spine1, p4DeviceId&#x3D;1, protocol&#x3D;P4Runtime, gNMI, gNOI</span><br><span class="line">id&#x3D;device:spine2, available&#x3D;true, local-status&#x3D;connected 1h5m ago, role&#x3D;MASTER, type&#x3D;SWITCH, mfr&#x3D;Open Networking Foundation, hw&#x3D;BMv2 simple_switch, sw&#x3D;Stratum, serial&#x3D;unknown, chassis&#x3D;0, driver&#x3D;stratum-bmv2:org.onosproject.pipelines.fabric, locType&#x3D;none, managementAddress&#x3D;grpc:&#x2F;&#x2F;mininet:50004?device_id&#x3D;1, name&#x3D;device:spine2, p4DeviceId&#x3D;1, protocol&#x3D;P4Runtime, gNMI, gNOI</span><br></pre></td></tr></table></figure>
+
+<ol start="3">
+<li>host测试</li>
+</ol>
+<p>使用make mn-cli访问mininet cli，mininet模拟器创建拓扑脚本为./topo/topo.py，创建了4个stratum-bmv2转发设备，4个host终端，可进行host网络功能验证:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">mininet&gt; dump</span><br><span class="line">&lt;RoutedHost h1: h1-eth0:10.0.0.1 pid&#x3D;15&gt;</span><br><span class="line">&lt;TaggedRoutedHost h2: h2-eth0.10:10.0.0.2 pid&#x3D;17&gt;</span><br><span class="line">&lt;RoutedHost h3: h3-eth0:10.0.0.3 pid&#x3D;19&gt;</span><br><span class="line">&lt;TaggedRoutedHost h4: h4-eth0.20:10.0.0.4 pid&#x3D;21&gt;</span><br><span class="line">&lt;StratumBmv2Switch leaf1: lo:127.0.0.1,leaf1-eth1:None,leaf1-eth2:None,leaf1-eth3:None,leaf1-eth4:None pid&#x3D;25&gt;</span><br><span class="line">&lt;StratumBmv2Switch leaf2: lo:127.0.0.1,leaf2-eth1:None,leaf2-eth2:None,leaf2-eth3:None,leaf2-eth4:None pid&#x3D;29&gt;</span><br><span class="line">&lt;StratumBmv2Switch spine1: lo:127.0.0.1,spine1-eth1:None,spine1-eth2:None pid&#x3D;33&gt;</span><br><span class="line">&lt;StratumBmv2Switch spine2: lo:127.0.0.1,spine2-eth1:None,spine2-eth2:None pid&#x3D;37&gt;</span><br></pre></td></tr></table></figure>
+
+<p>ping 测试</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line">mininet&gt; h1 ping h2</span><br><span class="line">PING 10.0.2.2 (10.0.2.2) 56(84) bytes of data.</span><br><span class="line">64 bytes from 10.0.2.2: icmp_seq&#x3D;1 ttl&#x3D;63 time&#x3D;9.84 ms</span><br><span class="line">64 bytes from 10.0.2.2: icmp_seq&#x3D;2 ttl&#x3D;63 time&#x3D;6.98 ms</span><br><span class="line">64 bytes from 10.0.2.2: icmp_seq&#x3D;3 ttl&#x3D;63 time&#x3D;7.47 ms</span><br><span class="line">64 bytes from 10.0.2.2: icmp_seq&#x3D;4 ttl&#x3D;63 time&#x3D;1.70 ms</span><br><span class="line">64 bytes from 10.0.2.2: icmp_seq&#x3D;5 ttl&#x3D;63 time&#x3D;7.58 ms</span><br><span class="line">^C</span><br><span class="line">--- 10.0.2.2 ping statistics ---</span><br><span class="line">5 packets transmitted, 5 received, 0% packet loss, time 4004ms</span><br><span class="line">rtt min&#x2F;avg&#x2F;max&#x2F;mdev &#x3D; 1.708&#x2F;6.718&#x2F;9.842&#x2F;2.694 ms</span><br><span class="line">mininet&gt; h1 ping h3</span><br><span class="line">PING 10.0.3.1 (10.0.3.1) 56(84) bytes of data.</span><br><span class="line">^C</span><br><span class="line">--- 10.0.3.1 ping statistics ---</span><br><span class="line">6 packets transmitted, 0 received, 100% packet loss, time 5126ms</span><br><span class="line"></span><br><span class="line">mininet&gt; h1 ping h3</span><br><span class="line">PING 10.0.3.1 (10.0.3.1) 56(84) bytes of data.</span><br><span class="line">^C</span><br><span class="line">--- 10.0.3.1 ping statistics ---</span><br><span class="line">2 packets transmitted, 0 received, 100% packet loss, time 1018ms</span><br><span class="line"></span><br><span class="line">mininet&gt; h3 ping h1</span><br><span class="line">PING 10.0.2.1 (10.0.2.1) 56(84) bytes of data.</span><br><span class="line">64 bytes from 10.0.2.1: icmp_seq&#x3D;2 ttl&#x3D;62 time&#x3D;21.5 ms</span><br><span class="line">64 bytes from 10.0.2.1: icmp_seq&#x3D;3 ttl&#x3D;62 time&#x3D;14.8 ms</span><br><span class="line">^C</span><br><span class="line">--- 10.0.2.1 ping statistics ---</span><br><span class="line">3 packets transmitted, 2 received, 33% packet loss, time 2017ms</span><br><span class="line">rtt min&#x2F;avg&#x2F;max&#x2F;mdev &#x3D; 14.801&#x2F;18.154&#x2F;21.507&#x2F;3.353 ms</span><br><span class="line">mininet&gt; h1 ping h3</span><br><span class="line">PING 10.0.3.1 (10.0.3.1) 56(84) bytes of data.</span><br><span class="line">64 bytes from 10.0.3.1: icmp_seq&#x3D;1 ttl&#x3D;62 time&#x3D;7.21 ms</span><br><span class="line">64 bytes from 10.0.3.1: icmp_seq&#x3D;2 ttl&#x3D;62 time&#x3D;22.0 ms</span><br><span class="line">^C</span><br><span class="line">--- 10.0.3.1 ping statistics ---</span><br><span class="line">2 packets transmitted, 2 received, 0% packet loss, time 1001ms</span><br><span class="line">rtt min&#x2F;avg&#x2F;max&#x2F;mdev &#x3D; 7.219&#x2F;14.634&#x2F;22.049&#x2F;7.415 ms</span><br></pre></td></tr></table></figure>
+
+<p>本样例未使用dhcp分配ip，host都静态配置的ip，h1和h2为同一子网，ping直接会触发arp信息交换，直接可以ping通，h1和h3为不同子网，需要保证两个host都上线，保证onos控制器已知了h3接入位置，h1和h3才能ping通.</p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/trellis/" rel="tag"># trellis</a>
+              <a href="/tags/stratum/" rel="tag"># stratum</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2020/02/10/wuhan-come-on/" rel="prev" title="武汉加油-中国加油">
+      <i class="fa fa-chevron-left"></i> 武汉加油-中国加油
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let activeClass = CONFIG.comments.activeClass;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Trellis-Stratum样例运行及解析"><span class="nav-number">1.</span> <span class="nav-text">Trellis+Stratum样例运行及解析</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#代码下载"><span class="nav-number">1.1.</span> <span class="nav-text">代码下载</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#样例运行依赖"><span class="nav-number">1.2.</span> <span class="nav-text">样例运行依赖</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Make命令"><span class="nav-number">1.3.</span> <span class="nav-text">Make命令</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#样例运行"><span class="nav-number">1.4.</span> <span class="nav-text">样例运行</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">HUI</p>
+  <div class="site-description" itemprop="description">DAY DAY UP</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">5</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">5</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/xiaohuiluo" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;xiaohuiluo" rel="noopener" target="_blank"><i class="fa fa-fw fa-github"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:xiaohui.luo@outlook.com" title="E-Mail → mailto:xiaohui.luo@outlook.com" rel="noopener" target="_blank"><i class="fa fa-fw fa-envelope"></i>E-Mail</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="fa fa-HUI"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">HUI</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-area-chart"></i>
+    </span>
+    <span title="站点总字数">28k</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">26 分钟</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v4.2.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> v7.7.0
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('//unpkg.com/valine/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el: '#valine-comments',
+      verify: false,
+      notify: false,
+      appId: 'pfTUD63YUhWTamqJKw9S1mqx-gzGzoHsz',
+      appKey: 'LeGuYQkIPv7VNuQR9Xflj3wv',
+      placeholder: "comment",
+      avatar: 'mm',
+      meta: guest,
+      pageSize: '10' || 10,
+      visitor: true,
+      lang: '' || 'zh-cn',
+      path: location.pathname,
+      recordIP: false,
+      serverURLs: ''
+    });
+  }, window.Valine);
+});
+</script>
+
+</body>
+</html>
